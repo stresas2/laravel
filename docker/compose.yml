@@ -1,0 +1,13 @@
+services:
+    nginx:
+        container_name: nginx
+        ports:
+            - "80:80"
+        volumes:
+            - ../src:/srv/www
+        build: nginx
+    php-fpm:
+        container_name: php-fpm
+        build: php
+        volumes_from:
+            - nginx
