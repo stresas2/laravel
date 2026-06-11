@@ -5,12 +5,11 @@ namespace Laravel\Prompts\Themes\Default;
 use Laravel\Prompts\Concerns\Colors;
 use Laravel\Prompts\Concerns\Truncation;
 use Laravel\Prompts\Prompt;
-use RuntimeException;
 
 abstract class Renderer
 {
-    use Truncation;
     use Colors;
+    use Truncation;
 
     /**
      * The output to be rendered.
@@ -22,7 +21,7 @@ abstract class Renderer
      */
     public function __construct(protected Prompt $prompt)
     {
-        $this->checkTerminalSize($prompt);
+        //
     }
 
     /**
@@ -62,6 +61,36 @@ abstract class Renderer
     }
 
     /**
+     * Render an hint message.
+     */
+    protected function hint(string $message): self
+    {
+        if ($message === '') {
+            return $this;
+        }
+
+        $message = $this->truncate($message, $this->prompt->terminal()->cols() - 6);
+
+        return $this->line($this->gray("  {$message}"));
+    }
+
+    /**
+     * Apply the callback if the given "value" is truthy.
+     *
+     * @return $this
+     */
+    protected function when(mixed $value, callable $callback, ?callable $default = null): self
+    {
+        if ($value) {
+            $callback($this);
+        } elseif ($default) {
+            $default($this);
+        }
+
+        return $this;
+    }
+
+    /**
      * Render the output with a blank line above and below.
      */
     public function __toString()
@@ -69,20 +98,5 @@ abstract class Renderer
         return str_repeat(PHP_EOL, max(2 - $this->prompt->newLinesWritten(), 0))
             .$this->output
             .(in_array($this->prompt->state, ['submit', 'cancel']) ? PHP_EOL : '');
-    }
-
-    /**
-     * Check that the terminal is large enough to render the prompt.
-     */
-    private function checkTerminalSize(Prompt $prompt): void
-    {
-        $required = 8;
-        $actual = $prompt->terminal()->lines();
-
-        if ($actual < $required) {
-            throw new RuntimeException(
-                "The terminal height must be at least [$required] lines but is currently [$actual]. Please increase the height or reduce the font size."
-            );
-        }
     }
 }

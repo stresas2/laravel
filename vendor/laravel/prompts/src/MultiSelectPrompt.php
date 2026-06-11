@@ -7,10 +7,7 @@ use Illuminate\Support\Collection;
 
 class MultiSelectPrompt extends Prompt
 {
-    /**
-     * The index of the highlighted option.
-     */
-    public int $highlighted = 0;
+    use Concerns\Scrolling;
 
     /**
      * The options for the multi-select prompt.
@@ -34,7 +31,7 @@ class MultiSelectPrompt extends Prompt
     protected array $values = [];
 
     /**
-     * Create a new SelectPrompt instance.
+     * Create a new MultiSelectPrompt instance.
      *
      * @param  array<int|string, string>|Collection<int|string, string>  $options
      * @param  array<int|string>|Collection<int, int|string>  $default
@@ -45,16 +42,23 @@ class MultiSelectPrompt extends Prompt
         array|Collection $default = [],
         public int $scroll = 5,
         public bool|string $required = false,
-        public ?Closure $validate = null,
+        public mixed $validate = null,
+        public string $hint = '',
+        public ?Closure $transform = null,
     ) {
         $this->options = $options instanceof Collection ? $options->all() : $options;
         $this->default = $default instanceof Collection ? $default->all() : $default;
         $this->values = $this->default;
 
+        $this->initializeScrolling(0);
+
         $this->on('key', fn ($key) => match ($key) {
-            Key::UP, Key::UP_ARROW, Key::LEFT, Key::LEFT_ARROW, Key::SHIFT_TAB, 'k', 'h' => $this->highlightPrevious(),
-            Key::DOWN, Key::DOWN_ARROW, Key::RIGHT, Key::RIGHT_ARROW, Key::TAB, 'j', 'l' => $this->highlightNext(),
+            Key::UP, Key::UP_ARROW, Key::LEFT, Key::LEFT_ARROW, Key::SHIFT_TAB, Key::CTRL_P, Key::CTRL_B, 'k', 'h' => $this->highlightPrevious(count($this->options)),
+            Key::DOWN, Key::DOWN_ARROW, Key::RIGHT, Key::RIGHT_ARROW, Key::TAB, Key::CTRL_N, Key::CTRL_F, 'j', 'l' => $this->highlightNext(count($this->options)),
+            Key::oneOf(Key::HOME, $key) => $this->highlight(0),
+            Key::oneOf(Key::END, $key) => $this->highlight(count($this->options) - 1),
             Key::SPACE => $this->toggleHighlighted(),
+            Key::CTRL_A => $this->toggleAll(),
             Key::ENTER => $this->submit(),
             default => null,
         });
@@ -78,10 +82,20 @@ class MultiSelectPrompt extends Prompt
     public function labels(): array
     {
         if (array_is_list($this->options)) {
-            return array_values(array_intersect_key($this->options, $this->values));
+            return array_map(fn ($value) => (string) $value, $this->values);
         }
 
         return array_values(array_intersect_key($this->options, array_flip($this->values)));
+    }
+
+    /**
+     * The currently visible options.
+     *
+     * @return array<int|string, string>
+     */
+    public function visible(): array
+    {
+        return array_slice($this->options, $this->firstVisible, $this->scroll, preserve_keys: true);
     }
 
     /**
@@ -105,19 +119,17 @@ class MultiSelectPrompt extends Prompt
     }
 
     /**
-     * Highlight the previous entry, or wrap around to the last entry.
+     * Toggle all options.
      */
-    protected function highlightPrevious(): void
+    protected function toggleAll(): void
     {
-        $this->highlighted = $this->highlighted === 0 ? count($this->options) - 1 : $this->highlighted - 1;
-    }
-
-    /**
-     * Highlight the next entry, or wrap around to the first entry.
-     */
-    protected function highlightNext(): void
-    {
-        $this->highlighted = $this->highlighted === count($this->options) - 1 ? 0 : $this->highlighted + 1;
+        if (count($this->values) === count($this->options)) {
+            $this->values = [];
+        } else {
+            $this->values = array_is_list($this->options)
+                ? array_values($this->options)
+                : array_keys($this->options);
+        }
     }
 
     /**

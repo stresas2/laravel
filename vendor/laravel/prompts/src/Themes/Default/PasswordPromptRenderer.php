@@ -28,7 +28,7 @@ class PasswordPromptRenderer extends Renderer
                     $this->strikethrough($this->dim($this->truncate($prompt->masked() ?: $prompt->placeholder, $maxWidth))),
                     color: 'red',
                 )
-                ->error('Cancelled.'),
+                ->error($prompt->cancelMessage),
 
             'error' => $this
                 ->box(
@@ -43,7 +43,11 @@ class PasswordPromptRenderer extends Renderer
                     $this->cyan($this->truncate($prompt->label, $prompt->terminal()->cols() - 6)),
                     $prompt->maskedWithCursor($maxWidth),
                 )
-                ->newLine(), // Space for errors
+                ->when(
+                    $prompt->hint,
+                    fn () => $this->hint($prompt->hint),
+                    fn () => $this->newLine() // Space for errors
+                ),
         };
     }
 }
