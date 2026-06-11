@@ -2,10 +2,7 @@
 
 ## Requirements:
 
-- Use **preinstalled laravel or upgrade it to the latest version** project
-- Use **latest stable php** version
-- **GIT** version control
-- Add any relational database (MySQL, PostgreSQL, SQLite) you wish to use
+- Add any relational database (SQLite) you wish to use
 - **Bootstrap** or any other **CSS** framework for frontend
 
 ## Task
