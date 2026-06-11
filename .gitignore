@@ -16,4 +16,4 @@ src/npm-debug.log
 src/yarn-error.log
 .fleet
 .idea
-.vscode
+.vscodevendor/
