@@ -5,27 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->query('search');
-        $cacheKey = 'products.web.' . md5($search ?? '');
+        $cacheKey = 'products.web.' . md5($request->getQueryString());
 
-        $products = Cache::remember($cacheKey, 300, function () use ($search) {
-            $query = Product::withCount(['stocks as total_stock' => function ($q) {
-                $q->selectRaw('sum(stock)');
-            }]);
-
-            if ($search) {
-                $query->where('description', 'like', "%{$search}%");
-            }
-
-            return $query->orderBy('sku')->paginate(20)->withQueryString();
+        $products = Cache::remember($cacheKey, 300, function () {
+            return QueryBuilder::for(Product::class)
+                ->allowedFilters([AllowedFilter::partial('description')])
+                ->allowedSorts(['sku'])
+                ->defaultSort('sku')
+                ->paginate(20)
+                ->withQueryString();
         });
 
-        return view('products.index', compact('products', 'search'));
+        return view('products.index', compact('products'));
     }
 
     public function show(string $sku)

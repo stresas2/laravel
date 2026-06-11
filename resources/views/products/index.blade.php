@@ -12,13 +12,13 @@
     <div class="input-group">
         <input
             type="text"
-            name="search"
+            name="filter[description]"
             class="form-control"
             placeholder="Search by description..."
-            value="{{ $search }}"
+            value="{{ request('filter.description') }}"
         >
         <button class="btn btn-primary" type="submit">Search</button>
-        @if($search)
+        @if(request('filter.description'))
             <a href="{{ route('products.index') }}" class="btn btn-outline-secondary">Clear</a>
         @endif
     </div>
